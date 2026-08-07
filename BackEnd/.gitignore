@@ -34,3 +34,5 @@ build/
 
 ### Secrets ###
 .env
+# Never commit real secrets — use application.properties locally only
+src/main/resources/application.properties
