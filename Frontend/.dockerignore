@@ -1,0 +1,22 @@
+# Node
+node_modules
+npm-debug.log*
+
+# Build output (built inside Docker, not needed from host)
+dist
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Editor
+.vscode
+.idea
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

@@ -1,0 +1,50 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# docker-compose.dev.yml — LOCAL DEVELOPMENT ONLY
+#
+# Runs ONLY the infrastructure services (PostgreSQL + Redis).
+# Spring Boot runs in IntelliJ directly for hot-reload and debugging.
+#
+# Usage:
+#   docker compose -f docker-compose.dev.yml up -d
+#   (then run Spring Boot from IntelliJ as normal)
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── PostgreSQL ──────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: ecom_postgres_dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ecom
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Haris@285046
+    ports:
+      - "5432:5432"           # Exposed to Windows host so IntelliJ app can connect
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ecom"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis ───────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: ecom_redis_dev
+    restart: unless-stopped
+    command: redis-server --loglevel warning
+    ports:
+      - "6379:6379"           # Exposed to Windows host so IntelliJ app can connect
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+# ── Persistent Volume (survives container restarts) ───────────────────────────
+volumes:
+  postgres_dev_data:
+    driver: local

@@ -1,0 +1,122 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# docker-compose.yml — SpringEcom full stack (Backend + Frontend)
+# Services: postgres, redis, spring-app, frontend
+# Docker Hub: mdharis285046/ecom-backend, mdharis285046/ecom-frontend
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── PostgreSQL ──────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: ecom_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ecom
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5432:5432"               # Remove in production
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ecom"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ecom_network
+
+  # ── Redis ───────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: ecom_redis
+    restart: unless-stopped
+    command: redis-server --save 60 1 --loglevel warning
+    ports:
+      - "6379:6379"               # Remove in production
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ecom_network
+
+  # ── Spring Boot Backend ─────────────────────────────────────────────────────
+  spring-app:
+    image: mdharis285046/ecom-backend:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ecom_backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      # ── Database ──────────────────────────────────────────────────────────
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/ecom
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+
+      # ── Redis ─────────────────────────────────────────────────────────────
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_CACHE_TYPE: redis
+      SPRING_CACHE_REDIS_TIME_TO_LIVE: 600000
+
+      # ── Security / JWT ────────────────────────────────────────────────────
+      JWT_SECRETKEY: ${JWT_SECRET_KEY}
+
+      # ── Google OAuth2 ─────────────────────────────────────────────────────
+      SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_SCOPE: openid,profile,email
+      SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_REDIRECT_URI: "{baseUrl}/login/oauth2/code/{registrationId}"
+
+      # ── File Upload ───────────────────────────────────────────────────────
+      SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE: 10MB
+      SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE: 10MB
+
+      # ── JVM Options ───────────────────────────────────────────────────────
+      JAVA_OPTS: "-Xms256m -Xmx512m"
+    ports:
+      - "8080:8080"
+    networks:
+      - ecom_network
+
+  # ── React + Vite Frontend (served by Nginx) ─────────────────────────────────
+  frontend:
+    image: mdharis285046/ecom-frontend:latest
+    build:
+      context: ../Frontend
+      dockerfile: Dockerfile
+      args:
+        # Backend URL the browser will call — update for production
+        VITE_BASE_URL: ${VITE_BASE_URL:-http://localhost:8080}
+    container_name: ecom_frontend
+    restart: unless-stopped
+    depends_on:
+      - spring-app
+    ports:
+      - "80:80"
+    networks:
+      - ecom_network
+
+# ── Persistent Volumes ────────────────────────────────────────────────────────
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+# ── Shared Network ────────────────────────────────────────────────────────────
+networks:
+  ecom_network:
+    driver: bridge

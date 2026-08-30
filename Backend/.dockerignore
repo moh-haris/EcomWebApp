@@ -1,0 +1,28 @@
+# Maven target output — the JAR is built inside Docker, not from host
+target/
+
+# IDE and editor files
+.idea/
+.vscode/
+*.iml
+
+# Maven wrapper downloads (not needed in container)
+.mvn/wrapper/maven-wrapper.jar
+
+# Environment secrets
+.env
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Documentation (not needed in container)
+*.md
