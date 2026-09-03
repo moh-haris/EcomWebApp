@@ -47,32 +47,24 @@ public class ProductController {
 
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/product")
-    public ResponseEntity<?> addProduct(
+    public ResponseEntity<Product> addProduct(
             @RequestPart Product product,
-            @RequestPart MultipartFile imageFile) {
+            @RequestPart MultipartFile imageFile) throws IOException {
 
-        try {
-            Product savedProduct = productService.addOrUpdateProduct(product, imageFile);
-            return new ResponseEntity<>(savedProduct, HttpStatus.CREATED);
-        } catch (IOException e) {
-            return new ResponseEntity<>(new com.haris.SpringEcom.error.ApiError(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR), HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+        Product savedProduct = productService.addOrUpdateProduct(product, imageFile);
+        return new ResponseEntity<>(savedProduct, HttpStatus.CREATED);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+   @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/product/{id}")
     public ResponseEntity<String> updateProduct(
             @PathVariable int id,
             @RequestPart Product product,
-            @RequestPart(value = "imageFile", required = false) MultipartFile imageFile) {
+            @RequestPart(value = "imageFile", required = false) MultipartFile imageFile) throws IOException {
 
-        try {
-            product.setId(id);
-            productService.addOrUpdateProduct(product, imageFile);
-            return new ResponseEntity<>("Updated", HttpStatus.OK);
-        } catch (IOException e) {
-            return new ResponseEntity<>("Failed to update product: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+        product.setId(id);
+        productService.addOrUpdateProduct(product, imageFile);
+        return new ResponseEntity<>("Updated", HttpStatus.OK);
     }
 
     @PreAuthorize("hasRole('ADMIN')")
